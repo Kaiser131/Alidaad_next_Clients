@@ -102,7 +102,7 @@ const Banner = () => {
                                 src={banner.image}
                                 alt={banner.heading || `Banner ${index + 1}`}
                                 loading="eager"
-                                fetchpriority="high"
+                                fetchPriority="high"
                                 style={{
                                     imageRendering: '-webkit-optimize-contrast',
                                     imageRendering: 'crisp-edges',

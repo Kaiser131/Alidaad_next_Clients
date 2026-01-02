@@ -11,17 +11,16 @@ import { Trash2, Plus, Edit2, X, Save, Image as ImageIcon, Loader2 } from 'lucid
 import Loading from '@/components/Shared/Loading/Loading';
 import { imageUpload } from '@/Utils/ImageUpload';
 
-const BannerEditor = ({ initialBanners }) => {
+const OfferEditor = ({ initialOffers }) => {
     const axiosSecure = useAxiosSecure();
     const router = useRouter();
 
-    const [banners, setBanners] = useState(initialBanners);
+    const [offers, setOffers] = useState(initialOffers);
     const [showAddForm, setShowAddForm] = useState(false);
-    const [editingBanner, setEditingBanner] = useState(null);
+    const [editingOffer, setEditingOffer] = useState(null);
     const [formData, setFormData] = useState({
         image: '',
-        heading: '',
-        text: '',
+        alt: '',
         order: 0
     });
     const [imageFile, setImageFile] = useState(null);
@@ -32,8 +31,7 @@ const BannerEditor = ({ initialBanners }) => {
     const resetForm = () => {
         setFormData({
             image: '',
-            heading: '',
-            text: '',
+            alt: '',
             order: 0
         });
         setImageFile(null);
@@ -76,16 +74,16 @@ const BannerEditor = ({ initialBanners }) => {
             setIsUploadingImage(false);
         }
 
-        if (!imageUrl.trim() || !formData.heading.trim()) {
+        if (!imageUrl.trim() || !formData.alt.trim()) {
             Swal.fire({
                 title: "Validation Error",
-                text: "Image and Heading are required!",
+                text: "Image and Alt text are required!",
                 icon: "warning"
             });
             return;
         }
 
-        const bannerData = {
+        const offerData = {
             ...formData,
             image: imageUrl
         };
@@ -93,22 +91,22 @@ const BannerEditor = ({ initialBanners }) => {
         setIsProcessing(true);
 
         try {
-            if (editingBanner) {
-                // Update banner
-                await axiosSecure.put(`/banners/${editingBanner._id}`, bannerData);
+            if (editingOffer) {
+                // Update offer
+                await axiosSecure.put(`/offers/${editingOffer._id}`, offerData);
                 Swal.fire({
                     title: "Updated!",
-                    text: "Banner updated successfully.",
+                    text: "Offer updated successfully.",
                     icon: "success",
                     timer: 2000
                 });
-                setEditingBanner(null);
+                setEditingOffer(null);
             } else {
-                // Add banner
-                await axiosSecure.post('/banners', bannerData);
+                // Add offer
+                await axiosSecure.post('/offers', offerData);
                 Swal.fire({
                     title: "Success!",
-                    text: "Banner added successfully.",
+                    text: "Offer added successfully.",
                     icon: "success",
                     timer: 2000
                 });
@@ -120,7 +118,7 @@ const BannerEditor = ({ initialBanners }) => {
         } catch (error) {
             Swal.fire({
                 title: "Error!",
-                text: editingBanner ? "Failed to update banner." : "Failed to add banner.",
+                text: editingOffer ? "Failed to update offer." : "Failed to add offer.",
                 icon: "error"
             });
         } finally {
@@ -128,29 +126,28 @@ const BannerEditor = ({ initialBanners }) => {
         }
     };
 
-    const handleEdit = (banner) => {
-        setEditingBanner(banner);
+    const handleEdit = (offer) => {
+        setEditingOffer(offer);
         setFormData({
-            image: banner.image || '',
-            heading: banner.heading || '',
-            text: banner.text || '',
-            order: banner.order || 0
+            image: offer.image || '',
+            alt: offer.alt || '',
+            order: offer.order || 0
         });
-        setImagePreview(banner.image || '');
+        setImagePreview(offer.image || '');
         setImageFile(null);
         setShowAddForm(false);
     };
 
     const handleCancelEdit = () => {
-        setEditingBanner(null);
+        setEditingOffer(null);
         setShowAddForm(false);
         resetForm();
     };
 
-    const handleDelete = async (id, heading) => {
+    const handleDelete = async (id, alt) => {
         const result = await Swal.fire({
             title: "Are you sure?",
-            text: `Do you want to delete "${heading}"?`,
+            text: `Do you want to delete "${alt}"?`,
             icon: "warning",
             showCancelButton: true,
             confirmButtonColor: "#3085d6",
@@ -161,10 +158,10 @@ const BannerEditor = ({ initialBanners }) => {
         if (result.isConfirmed) {
             setIsProcessing(true);
             try {
-                await axiosSecure.delete(`/banners/${id}`);
+                await axiosSecure.delete(`/offers/${id}`);
                 Swal.fire({
                     title: "Deleted!",
-                    text: "Banner has been deleted.",
+                    text: "Offer has been deleted.",
                     icon: "success",
                     timer: 2000
                 });
@@ -172,7 +169,7 @@ const BannerEditor = ({ initialBanners }) => {
             } catch (error) {
                 Swal.fire({
                     title: "Error!",
-                    text: "Failed to delete banner.",
+                    text: "Failed to delete offer.",
                     icon: "error"
                 });
             } finally {
@@ -184,11 +181,11 @@ const BannerEditor = ({ initialBanners }) => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold">Edit Banner</h1>
+                <h1 className="text-3xl font-bold">Edit What We Offer</h1>
                 <Button
                     onClick={() => {
                         setShowAddForm(!showAddForm);
-                        setEditingBanner(null);
+                        setEditingOffer(null);
                         resetForm();
                     }}
                     className="flex items-center gap-2"
@@ -202,42 +199,43 @@ const BannerEditor = ({ initialBanners }) => {
                     ) : (
                         <>
                             <Plus className="h-4 w-4" />
-                            Add New Banner
+                            Add New Offer
                         </>
                     )}
                 </Button>
             </div>
 
-            {/* Current Banner Images Preview Section */}
-            {initialBanners.length > 0 && (
-                <Card className="bg-gradient-to-r from-blue-50 to-purple-50">
+            {/* Current Offer Images Preview Section */}
+            {initialOffers.length > 0 && (
+                <Card className="bg-gradient-to-r from-green-50 to-yellow-50">
                     <CardContent className="p-6">
                         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                             <ImageIcon className="h-5 w-5" />
-                            Current Banner Images ({initialBanners.length})
+                            Current Offer Images ({initialOffers.length})
                         </h2>
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                            {initialBanners.map((banner, index) => (
+                            {initialOffers.map((offer, index) => (
                                 <div
-                                    key={banner._id}
+                                    key={offer._id}
                                     className="relative group cursor-pointer rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all"
-                                    onClick={() => handleEdit(banner)}
+                                    onClick={() => handleEdit(offer)}
                                 >
-                                    <div className="aspect-video relative">
+                                    <div className="aspect-square relative">
                                         <img
-                                            src={banner.image}
-                                            alt={banner.heading}
+                                            src={offer.image}
+                                            alt={offer.alt}
                                             className="w-full h-full object-cover"
+                                            style={{ imageRendering: 'auto' }}
                                             onError={(e) => {
-                                                e.target.src = 'https://via.placeholder.com/300x200?text=No+Image';
+                                                e.target.src = 'https://via.placeholder.com/300x300?text=No+Image';
                                             }}
                                         />
                                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2">
                                             <p className="text-white text-xs font-semibold text-center truncate w-full">
-                                                {banner.heading}
+                                                {offer.alt}
                                             </p>
                                             <span className="text-white text-[10px] mt-1">
-                                                Order: {banner.order || 0}
+                                                Order: {offer.order || 0}
                                             </span>
                                             <Edit2 className="h-4 w-4 text-white mt-2" />
                                         </div>
@@ -253,11 +251,11 @@ const BannerEditor = ({ initialBanners }) => {
             )}
 
             {/* Add/Edit Form */}
-            {(showAddForm || editingBanner) && (
+            {(showAddForm || editingOffer) && (
                 <Card>
                     <CardContent className="p-6">
                         <h2 className="text-xl font-semibold mb-4">
-                            {editingBanner ? 'Edit Banner' : 'Add New Banner'}
+                            {editingOffer ? 'Edit Offer' : 'Add New Offer'}
                         </h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             {/* Image Upload Section */}
@@ -286,8 +284,9 @@ const BannerEditor = ({ initialBanners }) => {
                                                 src={imagePreview || formData.image}
                                                 alt="Preview"
                                                 className="w-full h-full object-cover"
+                                                style={{ imageRendering: 'auto' }}
                                                 onError={(e) => {
-                                                    e.target.src = 'https://via.placeholder.com/800x400?text=Image+Preview';
+                                                    e.target.src = 'https://via.placeholder.com/400x400?text=Image+Preview';
                                                 }}
                                             />
                                             <Button
@@ -317,7 +316,7 @@ const BannerEditor = ({ initialBanners }) => {
                                 </label>
                                 <Input
                                     type="url"
-                                    placeholder="https://example.com/banner.jpg or /images/banner.jpg"
+                                    placeholder="https://example.com/offer.jpg or /images/offer.jpg"
                                     value={formData.image}
                                     onChange={(e) => {
                                         setFormData({ ...formData, image: e.target.value });
@@ -331,27 +330,14 @@ const BannerEditor = ({ initialBanners }) => {
 
                             <div>
                                 <label className="block text-sm font-medium mb-2">
-                                    Heading *
+                                    Alt Text / Description *
                                 </label>
                                 <Input
                                     type="text"
-                                    placeholder="Welcome!"
-                                    value={formData.heading}
-                                    onChange={(e) => setFormData({ ...formData, heading: e.target.value })}
+                                    placeholder="Premium Quality Products"
+                                    value={formData.alt}
+                                    onChange={(e) => setFormData({ ...formData, alt: e.target.value })}
                                     required
-                                    disabled={isProcessing}
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium mb-2">
-                                    Description Text
-                                </label>
-                                <Input
-                                    type="text"
-                                    placeholder="Shop the latest trends..."
-                                    value={formData.text}
-                                    onChange={(e) => setFormData({ ...formData, text: e.target.value })}
                                     disabled={isProcessing}
                                 />
                             </div>
@@ -389,7 +375,7 @@ const BannerEditor = ({ initialBanners }) => {
                                     ) : (
                                         <>
                                             <Save className="h-4 w-4 mr-2" />
-                                            {editingBanner ? 'Update Banner' : 'Add Banner'}
+                                            {editingOffer ? 'Update Offer' : 'Add Offer'}
                                         </>
                                     )}
                                 </Button>
@@ -415,41 +401,42 @@ const BannerEditor = ({ initialBanners }) => {
             )}
 
             {/* Empty State */}
-            {initialBanners.length === 0 && !showAddForm && !editingBanner && (
+            {initialOffers.length === 0 && !showAddForm && !editingOffer && (
                 <Card>
                     <CardContent className="p-12 text-center">
                         <ImageIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">
-                            No banners yet
+                            No offers yet
                         </h3>
                         <p className="text-gray-600 mb-4">
-                            Get started by adding your first banner
+                            Get started by adding your first offer
                         </p>
                         <Button onClick={() => setShowAddForm(true)}>
                             <Plus className="h-4 w-4 mr-2" />
-                            Add First Banner
+                            Add First Offer
                         </Button>
                     </CardContent>
                 </Card>
             )}
 
-            {/* Banners Grid */}
-            {initialBanners.length > 0 && (
+            {/* Offers Grid */}
+            {initialOffers.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {initialBanners.map((banner) => (
+                    {initialOffers.map((offer) => (
                         <Card
-                            key={banner._id}
-                            className={`overflow-hidden hover:shadow-lg transition-shadow ${editingBanner?._id === banner._id ? 'ring-2 ring-blue-500' : ''
+                            key={offer._id}
+                            className={`overflow-hidden hover:shadow-lg transition-shadow ${editingOffer?._id === offer._id ? 'ring-2 ring-blue-500' : ''
                                 }`}
                         >
-                            <div className="relative aspect-video bg-gray-100">
-                                {banner.image ? (
+                            <div className="relative aspect-square bg-gray-100">
+                                {offer.image ? (
                                     <img
-                                        src={banner.image}
-                                        alt={banner.heading || 'Banner'}
+                                        src={offer.image}
+                                        alt={offer.alt || 'Offer'}
                                         className="w-full h-full object-cover"
+                                        style={{ imageRendering: 'auto' }}
                                         onError={(e) => {
-                                            e.target.src = 'https://via.placeholder.com/800x400?text=Image+Not+Found';
+                                            e.target.src = 'https://via.placeholder.com/400x400?text=Image+Not+Found';
                                         }}
                                     />
                                 ) : (
@@ -457,33 +444,26 @@ const BannerEditor = ({ initialBanners }) => {
                                         <ImageIcon className="h-16 w-16 text-gray-400" />
                                     </div>
                                 )}
-                                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-center p-4">
-                                    <h3 className="text-white text-xl font-semibold mb-2">
-                                        {banner.heading}
-                                    </h3>
-                                    {banner.text && (
-                                        <p className="text-white text-sm">
-                                            {banner.text}
-                                        </p>
-                                    )}
-                                </div>
                             </div>
 
                             <CardContent className="p-4">
                                 <div className="space-y-2 mb-4">
-                                    <p className="text-xs text-gray-500">
-                                        Order: {banner.order || 0}
+                                    <p className="text-sm font-medium truncate">
+                                        {offer.alt}
                                     </p>
-                                    {banner.createdAt && (
+                                    <p className="text-xs text-gray-500">
+                                        Order: {offer.order || 0}
+                                    </p>
+                                    {offer.createdAt && (
                                         <p className="text-xs text-gray-500">
-                                            Created: {new Date(banner.createdAt).toLocaleDateString()}
+                                            Created: {new Date(offer.createdAt).toLocaleDateString()}
                                         </p>
                                     )}
                                 </div>
 
                                 <div className="flex gap-2">
                                     <Button
-                                        onClick={() => handleEdit(banner)}
+                                        onClick={() => handleEdit(offer)}
                                         variant="outline"
                                         className="flex-1 flex items-center justify-center gap-2"
                                         disabled={isProcessing}
@@ -492,7 +472,7 @@ const BannerEditor = ({ initialBanners }) => {
                                         Edit
                                     </Button>
                                     <Button
-                                        onClick={() => handleDelete(banner._id, banner.heading)}
+                                        onClick={() => handleDelete(offer._id, offer.alt)}
                                         variant="destructive"
                                         className="flex-1 flex items-center justify-center gap-2"
                                         disabled={isProcessing}
@@ -510,4 +490,4 @@ const BannerEditor = ({ initialBanners }) => {
     );
 };
 
-export default BannerEditor;
+export default OfferEditor;

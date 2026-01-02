@@ -1,8 +1,12 @@
+'use client';
+
 import React from 'react';
 import { CursorHighlight } from "@/components/ui/cursor-highlight";
 import FlipStack from "@/components/ui/flipstack";
 import MotionCards, { MotionCardContent } from "@/components/ui/motioncards";
 import { MorphoTextFlip } from "@/components/ui/morphotextflip";
+import { useQuery } from '@tanstack/react-query';
+import useAxiosSecure from '@/Hooks/Axios/useAxiosSecure';
 
 import {
     Component,
@@ -19,9 +23,35 @@ import TextType from '../../../bits/TextType';
 
 
 const WhatWeOffer = () => {
+    const axiosSecure = useAxiosSecure();
 
+    // Fetch offers from database
+    const { data: offersData = [], isLoading } = useQuery({
+        queryKey: ['offers'],
+        queryFn: async () => {
+            const res = await axiosSecure.get('/offers');
+            return res.data;
+        }
+    });
 
-    const cards = [
+    // Transform offers data for cards (limit to 5)
+    const cards = offersData
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .slice(0, 5)
+        .map((offer) => ({
+            id: offer._id,
+            content: (
+                <img
+                    src={offer.image}
+                    alt={offer.alt}
+                    className="w-full h-full object-cover"
+                    style={{ imageRendering: 'auto' }}
+                />
+            ),
+        }));
+
+    // Default cards as fallback when no database content
+    const defaultCards = [
         {
             id: 1,
             content: (
@@ -73,11 +103,12 @@ const WhatWeOffer = () => {
             ),
         },
     ];
+
+    // Use the fetched cards, or fallback to default if loading/empty
+    const displayCards = cards.length > 0 ? cards : defaultCards;
+
     return (
-        // <div className='mx-auto px-4 md:px-10'>
         <div className='mx-auto md:max-w-11/12 md:-mt-24 p-4 overflow-hidden md:p-20'>
-            {/* <div>checking the server</div> */}
-            {/* md:bg-[#D92A54] */}
             <div className='flex w-full gap-10 flex-col md:flex-row'>
                 <div className='md:w-2/3 space-y-4'>
                     <div className='flex flex-col'>
@@ -112,10 +143,10 @@ const WhatWeOffer = () => {
                     </div>
                     <div>
                         <div className="w-full lg:hidden">
-                            <FlipStack cards={cards} />
+                            <FlipStack cards={displayCards} />
                         </div>
                         <div className="hidden lg:flex ">
-                            <FlipStack cards={cards} />
+                            <FlipStack cards={displayCards} />
                         </div>
                     </div>
 
