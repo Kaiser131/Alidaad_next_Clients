@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import {
     Accordion,
@@ -5,11 +7,25 @@ import {
     AccordionItem,
     AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useQuery } from '@tanstack/react-query';
+import useAxiosSecure from '@/Hooks/Axios/useAxiosSecure';
 
 import Typeanimation from "@/components/ui/typeanimation";
 
 const Faq = () => {
-    const faqData = [
+    const axiosSecure = useAxiosSecure();
+
+    // Fetch FAQs from database
+    const { data: faqsData = [], isLoading } = useQuery({
+        queryKey: ['faqs'],
+        queryFn: async () => {
+            const res = await axiosSecure.get('/faqs');
+            return res.data;
+        }
+    });
+
+    // Default FAQ data as fallback
+    const defaultFaqData = [
         {
             id: "item-1",
             question: "How do I place an order?",
@@ -92,6 +108,15 @@ const Faq = () => {
         }
     ];
 
+    // Use fetched FAQs or fallback to default (limit to 6)
+    const faqData = faqsData.length > 0
+        ? faqsData.sort((a, b) => (a.order || 0) - (b.order || 0)).slice(0, 6).map((faq, index) => ({
+            id: faq._id || `item-${index + 1}`,
+            question: faq.question,
+            answer: Array.isArray(faq.answer) ? faq.answer : [faq.answer]
+        }))
+        : defaultFaqData;
+
     return (
         <section className='  to-gray-50'>
             <div className='md:max-w-10/12 mx-auto px-4 '>
@@ -121,7 +146,7 @@ const Faq = () => {
                         type="single"
                         collapsible
                         className="w-full space-y-4"
-                        defaultValue="item-1"
+                        defaultValue={faqData.length > 0 ? faqData[0].id : "item-1"}
                     >
                         {faqData.map((faq) => (
                             <AccordionItem
