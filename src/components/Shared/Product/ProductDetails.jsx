@@ -38,6 +38,7 @@ const ProductDetails = () => {
     const { color, setColor, quantity, setQuantity, sizes, setSizes, user } = useAuth();
     const [selectedImage, setSelectedImage] = useState("");
     const [openShipping, setOpenShipping] = useState(true);
+    const router = useRouter();
 
     const [rating, setRating] = useState(5);
     const [name, setName] = useState('');
@@ -48,6 +49,11 @@ const ProductDetails = () => {
     const [loading, setLaoding] = useState(false);
     const { setSearchbarOpen, } = useAuth();
 
+    // Navigation handler for related products
+    const handleNavigate = (productId) => {
+        router.push(`/product_details/${productId}`);
+    };
+
     const { id } = useParams();
     const axiosSecure = useAxiosSecure();
     const axiosCommon = useAxiosCommon();
@@ -55,7 +61,6 @@ const ProductDetails = () => {
 
     // get the token from local storage
     const { cartToken, setCartOpen } = useAuth();
-    const router = useRouter();
 
 
     // main product

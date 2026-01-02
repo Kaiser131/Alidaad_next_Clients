@@ -19,6 +19,7 @@ export default function Checkout() {
     const [orderId, setOrderId] = useState('');
     const [pathaoDeliveryInfo, setPathaoDeliveryInfo] = useState(null);
     const [special_instruction, setSpecial_instruction] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('Cash on Delivery');
     // get users data_________________________________________________________________________________________________________________
     const [name, setName] = useState('');
     const [mobile, setMobile] = useState('');
@@ -108,13 +109,38 @@ export default function Checkout() {
 
     // add user details to the server_________________________________________________________________________________________
     const handlePlaceOrder = async () => {
-        const sliceMobile = mobile.slice(0, 3);
+        // Check required fields first
+        if (!name || !mobile || !address) {
+            toast.error('Please fill all the fields');
+            return;
+        }
 
-        if (sliceMobile !== '017' && sliceMobile !== '018' && sliceMobile !== '019' && sliceMobile !== '016' && sliceMobile !== '015' && sliceMobile !== '013' && sliceMobile !== '014') return toast.error('Please enter a valid Bangladeshi mobile number');
-        if (!name || !mobile || !address) return toast.error('Please fill all the fields');
-        if (mobile.length !== 11) return toast.error('Please enter a valid 11-digit mobile number');
-        if (!(address.length >= 10)) return toast.error('Address must be 10 characters long');
-        if (!deliveryCharge || !pathaoDeliveryInfo) return toast.error('Please complete delivery location selection');
+        // Check mobile length
+        if (mobile.length !== 11) {
+            toast.error('Please enter a valid 11-digit mobile number');
+            return;
+        }
+
+        // Check Bangladeshi mobile number prefix
+        const sliceMobile = mobile.slice(0, 3);
+        if (sliceMobile !== '017' && sliceMobile !== '018' && sliceMobile !== '019' && 
+            sliceMobile !== '016' && sliceMobile !== '015' && sliceMobile !== '013' && 
+            sliceMobile !== '014') {
+            toast.error('Please enter a valid Bangladeshi mobile number');
+            return;
+        }
+
+        // Check address length
+        if (address.length < 10) {
+            toast.error('Address must be at least 10 characters long');
+            return;
+        }
+
+        // Check delivery information
+        if (!deliveryCharge || !pathaoDeliveryInfo) {
+            toast.error('Please complete delivery location selection');
+            return;
+        }
         // console.log(address.length);
 
         // generate random order id_________________________________________________________________________________________
@@ -157,6 +183,7 @@ export default function Checkout() {
             address,
             special_instruction,
             delivery: 'Pathao',
+            paymentMethod,
             products_total: products_total - deliveryCharge,
             ordered_date: new Date(),
             ordered_month: new Date().toLocaleString('en-US', { month: 'long' }),
@@ -214,7 +241,7 @@ export default function Checkout() {
 
             <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 relative">
                 {/* Left Side - Form */}
-                <form className="bg-white p-4 rounded-xl shadow space-y-4 md:sticky md:top-24 md:h-[80vh]">
+                <form onSubmit={(e) => { e.preventDefault(); handlePlaceOrder(); }} className="bg-white p-4 rounded-xl shadow space-y-4 md:sticky md:top-24 md:h-[80vh]">
                     <h2 className="text-xl font-semibold">
                         Shipping Details
                     </h2>
@@ -360,7 +387,7 @@ export default function Checkout() {
                             {id && <span className="font-mina">৳{Math.ceil(singleTotal)}</span>}
                         </div>
                         <div className="my-4">
-                            <button onClick={handlePlaceOrder} className="bg-black text-white py-2 px-4 rounded w-full">Place Order</button>
+                            <button type="button" onClick={handlePlaceOrder} className="bg-black text-white py-2 px-4 rounded w-full">Place Order</button>
                         </div>
                     </div>
                 </div>
