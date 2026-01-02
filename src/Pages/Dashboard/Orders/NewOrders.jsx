@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { Search } from "lucide-react";
 import Breadcrumbs from "../../../components/Shared/Breadcrumbs/Breadcrumbs";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import useAxiosSecure from "../../../Hooks/Axios/useAxiosSecure";
 import Swal from "sweetalert2";
 import Loading from "../../../components/Shared/Loading/Loading";
 import { DataTable } from "../../../components/ui/data-table";
@@ -20,7 +19,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const NewOrders = () => {
-    const axiosSecure = useAxiosSecure();
+
+    // API URL configuration
+    const API_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000';
 
     // states_____________________________________________________________________________________________________________
     const [search, setSearch] = useState('');
@@ -28,20 +29,35 @@ const NewOrders = () => {
 
     // data fetching and request________________________________________________________________________________________________________
 
-    // listed new orders table data____________________________________________________________
+    // listed new orders table data - using Next.js fetch API
     const { data: orders = [], refetch, isLoading: ordersLoading } = useQuery({
         queryKey: ['new_orders', search, month],
         queryFn: async () => {
-            const { data } = await axiosSecure.get(`/order_lists/${'listed'}?search=${search}&month=${month}`);
-            return data;
-        }
+            const response = await fetch(`${API_URL}/order_lists/listed?search=${search}&month=${month}`, {
+                cache: 'no-store', // Always get fresh order data for dashboard
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch orders');
+            return response.json();
+        },
+        staleTime: 0, // Always refetch when component mounts
+        refetchOnMount: true,
     });
 
-    // proceed order___________________________________________________________________
+    // proceed order - using Next.js fetch API
     const { mutateAsync: proceedOrder } = useMutation({
         mutationFn: async (id) => {
-            const { data } = await axiosSecure.patch(`/proceed_order/${id}`);
-            return data;
+            const response = await fetch(`${API_URL}/proceed_order/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                cache: 'no-store'
+            });
+            if (!response.ok) throw new Error('Failed to proceed order');
+            return response.json();
         },
         onSuccess: () => {
             refetch();
@@ -53,11 +69,18 @@ const NewOrders = () => {
         }
     });
 
-    // cancel order_____________________________________________________________________
+    // cancel order - using Next.js fetch API
     const { mutateAsync: cancelOrder } = useMutation({
         mutationFn: async (id) => {
-            const { data } = await axiosSecure.patch(`/cancel_order/${id}`);
-            return data;
+            const response = await fetch(`${API_URL}/cancel_order/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                cache: 'no-store'
+            });
+            if (!response.ok) throw new Error('Failed to cancel order');
+            return response.json();
         },
         onSuccess: () => {
             refetch();
@@ -69,16 +92,16 @@ const NewOrders = () => {
         }
     });
 
-    // functions___________________________________________________________________________________________________________
+    // functions - memoized callbacks
 
-    const handleSearch = (e) => {
+    const handleSearch = useCallback((e) => {
         e.preventDefault();
         const form = e.target;
         const searchData = form.search.value;
         setSearch(searchData);
-    };
+    }, []);
 
-    const handleProceedOrder = async (id) => {
+    const handleProceedOrder = useCallback(async (id) => {
         Swal.fire({
             title: "Are you sure to proceed this order?",
             icon: "info",
@@ -91,9 +114,9 @@ const NewOrders = () => {
                 proceedOrder(id);
             }
         });
-    };
+    }, [proceedOrder]);
 
-    const handleCancelOrder = async (id) => {
+    const handleCancelOrder = useCallback(async (id) => {
         Swal.fire({
             title: "Are you sure to cancel this order?",
             icon: "warning",
@@ -106,10 +129,19 @@ const NewOrders = () => {
                 cancelOrder(id);
             }
         });
-    };
+    }, [cancelOrder]);
 
-    // Create columns with handler functions
-    const columns = createColumns(handleProceedOrder, handleCancelOrder);
+    // Create columns with handler functions - memoized
+    const columns = useMemo(
+        () => createColumns(handleProceedOrder, handleCancelOrder),
+        [handleProceedOrder, handleCancelOrder]
+    );
+
+    // Memoize reset handler
+    const handleReset = useCallback(() => {
+        setMonth('');
+        setSearch('');
+    }, []);
 
     if (ordersLoading) return <Loading />;
 
@@ -165,7 +197,7 @@ const NewOrders = () => {
                             </Select>
 
                             <Button
-                                onClick={() => { setMonth(''); setSearch(''); }}
+                                onClick={handleReset}
                                 variant="outline"
                                 className="bg-green-100 text-green-600 hover:bg-green-200 hover:text-green-700 w-full sm:w-auto"
                             >

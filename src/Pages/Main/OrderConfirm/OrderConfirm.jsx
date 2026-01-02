@@ -1,9 +1,8 @@
 "use client";
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { Mail, Phone, MapPin, User, Trash2 } from "lucide-react";
-import useAxiosSecure from '../../../Hooks/Axios/useAxiosSecure';
 import { useQuery } from '@tanstack/react-query';
 import Loading from '../../../components/Shared/Loading/Loading';
 import { useHead } from '@unhead/react';
@@ -11,16 +10,38 @@ import { useHead } from '@unhead/react';
 const OrderConfirm = () => {
 
     const { order_id } = useParams();
-    const axiosSecure = useAxiosSecure();
 
+    // API URL configuration
+    const API_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000';
+
+    // Fetch order confirmation data with Next.js fetch API
     const { data: confirmOrders = [], isLoading } = useQuery({
         queryKey: ['confirmOrders', order_id],
         queryFn: async () => {
-            const { data } = await axiosSecure.get(`/confirm_orders/${order_id}`);
-            return data;
+            const response = await fetch(`${API_URL}/confirm_orders/${order_id}`, {
+                next: { revalidate: 300 }, // Cache for 5 minutes
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch order confirmation');
+            return response.json();
         },
-        enabled: !!order_id
+        enabled: !!order_id,
+        staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+        cacheTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
     });
+
+    // Memoize expensive calculations
+    const subtotal = useMemo(
+        () => (confirmOrders?.products_total || 0) - (confirmOrders?.deliveryCharge || 0),
+        [confirmOrders?.products_total, confirmOrders?.deliveryCharge]
+    );
+
+    const productCount = useMemo(
+        () => confirmOrders?.products?.length || 0,
+        [confirmOrders?.products]
+    );
 
     useHead({
         title: `Order: ${order_id} - Alidaad`,
@@ -87,7 +108,7 @@ const OrderConfirm = () => {
                             <div className="space-y-2 text-sm">
                                 <div className="flex justify-between">
                                     <span>Subtotal</span>
-                                    <p><span className='font-mina'>৳ </span>{confirmOrders?.products_total - confirmOrders?.deliveryCharge}</p>
+                                    <p><span className='font-mina'>৳ </span>{subtotal}</p>
                                 </div>
                                 <div className="flex justify-between">
                                     <span>Delivery Charge</span>
@@ -117,7 +138,7 @@ const OrderConfirm = () => {
                             <div className="flex items-center gap-2 text-gray-700">
                                 <User size={18} /> {confirmOrders?.name}
                             </div>
-                            <p className="text-sm text-gray-500 mt-1">{confirmOrders?.products?.length} Order</p>
+                            <p className="text-sm text-gray-500 mt-1">{productCount} Order</p>
                         </div>
 
                         {/* Customer Information */}

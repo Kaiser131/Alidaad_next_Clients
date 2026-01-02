@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
     LineChart,
     Line,
@@ -12,7 +12,6 @@ import {
     ComposedChart,
     Legend,
 } from "recharts";
-import useAxiosSecure from "../../../Hooks/Axios/useAxiosSecure";
 import {
     Users,
     Package,
@@ -25,40 +24,80 @@ import {
 } from "lucide-react";
 
 export default function Analytic() {
-    const axiosSecure = useAxiosSecure();
+    // API URL configuration
+    const API_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000';
+
     const [loading, setLoading] = useState(true);
     const [dashboardData, setDashboardData] = useState(null);
     const [selectedMonth, setSelectedMonth] = useState(new Date().toLocaleString("en-US", { month: "long" }));
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-    // get year
-    const currentYear = new Date().getFullYear();
-    const years = Array.from({ length: 5 }, (_, i) => String(currentYear - i));
+    // Memoize years array to prevent recalculation on every render
+    const years = useMemo(() => {
+        const currentYear = new Date().getFullYear();
+        return Array.from({ length: 5 }, (_, i) => String(currentYear - i));
+    }, []);
 
-    const months = [
+    // Memoize months array
+    const months = useMemo(() => [
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
-    ];
+    ], []);
 
-    // Fetch dashboard data
-    const fetchDashboardData = async () => {
+    // Fetch dashboard data with Next.js fetch API - memoized
+    const fetchDashboardData = useCallback(async () => {
         try {
             setLoading(true);
-            const response = await axiosSecure.get(
-                `/dashboard_summary?month=${selectedMonth}&year=${selectedYear}`
+            const response = await fetch(
+                `${API_URL}/dashboard_summary?month=${selectedMonth}&year=${selectedYear}`,
+                {
+                    cache: 'no-store', // Always get fresh dashboard data
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                }
             );
-            setDashboardData(response.data);
+            if (!response.ok) throw new Error('Failed to fetch dashboard data');
+            const data = await response.json();
+            setDashboardData(data);
         } catch (error) {
             console.error("Error fetching dashboard data:", error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_URL, selectedMonth, selectedYear]);
 
     useEffect(() => {
         fetchDashboardData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedMonth, selectedYear]);
+    }, [fetchDashboardData]);
+
+    // Memoize weekly sales data preparation - BEFORE conditional returns
+    const weeklyChartData = useMemo(() => {
+        if (!dashboardData?.weeklySales) return [];
+        return dashboardData.weeklySales.map(item => {
+            const date = new Date(item.date);
+            return {
+                day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+                sell: item.sell,
+                quantity: item.quantity
+            };
+        });
+    }, [dashboardData?.weeklySales]);
+
+    // Memoize max quantity calculation for top products - BEFORE conditional returns
+    const maxQuantity = useMemo(() => {
+        if (!dashboardData?.topProducts) return 1;
+        return Math.max(...dashboardData.topProducts.map(p => p.totalQuantity), 1);
+    }, [dashboardData?.topProducts]);
+
+    // Memoize onChange handlers - BEFORE conditional returns
+    const handleYearChange = useCallback((e) => {
+        setSelectedYear(Number(e.target.value));
+    }, []);
+
+    const handleMonthChange = useCallback((e) => {
+        setSelectedMonth(e.target.value);
+    }, []);
 
     if (loading) {
         return (
@@ -94,19 +133,6 @@ export default function Analytic() {
             </div>
         );
     }
-
-    // Prepare weekly sales data with day names
-    const weeklyChartData = dashboardData.weeklySales.map(item => {
-        const date = new Date(item.date);
-        return {
-            day: date.toLocaleDateString('en-US', { weekday: 'short' }),
-            sell: item.sell,
-            quantity: item.quantity
-        };
-    });
-
-    // Calculate max quantity for top products (for percentage display)
-    const maxQuantity = Math.max(...dashboardData.topProducts.map(p => p.totalQuantity), 1);
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 min-h-screen">
@@ -224,7 +250,7 @@ export default function Analytic() {
                             <select
                                 className="border-2 border-gray-300 rounded-lg px-2 sm:px-3 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white hover:border-purple-400 transition-colors"
                                 value={selectedYear}
-                                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                                onChange={handleYearChange}
                             >
                                 {years.map((year, idx) => (
                                     <option key={idx} value={year}>{year}</option>
@@ -233,7 +259,7 @@ export default function Analytic() {
                             <select
                                 className="border-2 border-gray-300 rounded-lg px-2 sm:px-3 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white hover:border-purple-400 transition-colors"
                                 value={selectedMonth}
-                                onChange={(e) => setSelectedMonth(e.target.value)}
+                                onChange={handleMonthChange}
                             >
                                 {months.map((month, idx) => (
                                     <option key={idx} value={month}>{month}</option>

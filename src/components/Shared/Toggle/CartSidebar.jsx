@@ -4,10 +4,11 @@ import { motion } from "framer-motion";
 import { Trash2, X, ShoppingCart, LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import useAuth from "../../../Hooks/Auth/useAuth";
-import useAxiosSecure from "../../../Hooks/Axios/useAxiosSecure";
 import { QueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useRouter } from 'next/navigation';
+
+const API_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000';
 
 const CartSidebar = ({ isOpen, setIsOpen, data, refetch, style }) => {
 
@@ -16,7 +17,6 @@ const CartSidebar = ({ isOpen, setIsOpen, data, refetch, style }) => {
     const { user, cartToken } = useAuth();
     const [quantity, setQuantity] = useState(1);
     const router = useRouter();
-    const axiosSecure = useAxiosSecure();
     const queryClient = new QueryClient();
 
     // new category
@@ -40,8 +40,16 @@ const CartSidebar = ({ isOpen, setIsOpen, data, refetch, style }) => {
     // update a cart item_______________________________________________________________________________________________________________________________
     const { mutateAsync: updateCart } = useMutation({
         mutationFn: async ({ id, updateData }) => {
-            const { data } = await axiosSecure.patch(`/cart/${id}`, updateData);
-            return data;
+            const response = await fetch(`${API_URL}/cart/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updateData),
+                cache: 'no-store'
+            });
+            if (!response.ok) throw new Error('Failed to update cart');
+            return response.json();
         },
         onSuccess: () => {
             refetch();
@@ -56,7 +64,11 @@ const CartSidebar = ({ isOpen, setIsOpen, data, refetch, style }) => {
         if (action === 'increase') {
             try {
                 // Fetch current product data to check available quantity
-                const { data: productData } = await axiosSecure.get(`/product_details/${item.product_id}`);
+                const response = await fetch(`${API_URL}/product_details/${item.product_id}`, {
+                    cache: 'no-store' // Always check fresh stock data
+                });
+                if (!response.ok) throw new Error('Failed to fetch product');
+                const productData = await response.json();
                 const availableQuantity = parseInt(productData.quantity) || 0;
 
                 if (item.quantity >= availableQuantity) {
@@ -84,8 +96,12 @@ const CartSidebar = ({ isOpen, setIsOpen, data, refetch, style }) => {
     // delete cart item_______________________________________________________________________________________________________________________________
     const { mutateAsync: deleteCartItem } = useMutation({
         mutationFn: async (id) => {
-            const { data } = await axiosSecure.delete(`/cart/${id}`);
-            return data;
+            const response = await fetch(`${API_URL}/cart/${id}`, {
+                method: 'DELETE',
+                cache: 'no-store'
+            });
+            if (!response.ok) throw new Error('Failed to delete cart item');
+            return response.json();
         },
         onSuccess: () => {
             toast.success('Item deleted'),

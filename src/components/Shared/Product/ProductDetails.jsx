@@ -1,10 +1,9 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
-import useAxiosSecure from "../../../Hooks/Axios/useAxiosSecure";
 import Zoom from "react-medium-image-zoom";
 import 'react-medium-image-zoom/dist/styles.css';
 import ProductCard from "../Cards/ProductCard/ProductCard";
@@ -32,7 +31,6 @@ import { Progress } from "@/components/ui/progress";
 import { RxCross2 } from "react-icons/rx";
 import { imageUpload } from "../../../Utils/ImageUpload";
 import toast from "react-hot-toast";
-import useAxiosCommon from "../../../Hooks/Axios/useAxiosCommon";
 
 const ProductDetails = () => {
     const { color, setColor, quantity, setQuantity, sizes, setSizes, user } = useAuth();
@@ -49,15 +47,14 @@ const ProductDetails = () => {
     const [loading, setLaoding] = useState(false);
     const { setSearchbarOpen, } = useAuth();
 
-    // Navigation handler for related products
-    const handleNavigate = (productId) => {
+    // Navigation handler for related products - memoized
+    const handleNavigate = useCallback((productId) => {
         router.push(`/product_details/${productId}`);
-    };
+    }, [router]);
 
     const { id } = useParams();
-    const axiosSecure = useAxiosSecure();
-    const axiosCommon = useAxiosCommon();
     const queryClient = useQueryClient();
+    const API_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000';
 
     // get the token from local storage
     const { cartToken, setCartOpen } = useAuth();
@@ -67,49 +64,52 @@ const ProductDetails = () => {
     const { data: product = {}, isLoading } = useQuery({
         queryKey: ["product", id],
         queryFn: async () => {
-            const result = await axiosCommon.get(`/product_details/${id}`);
-            return result.data;
+            const response = await fetch(`${API_URL}/product_details/${id}`, {
+                next: { revalidate: 60 } // Cache for 60 seconds
+            });
+            if (!response.ok) throw new Error('Failed to fetch product');
+            return response.json();
         },
     });
 
-    // set selected color______________________________________________________________________________
+    // Initialize product defaults - combined and optimized single effect
     useEffect(() => {
-        if (product?.variant) {
-            setColor(product?.variant[0]); // ✅ first one selected
-        }
-    }, [product?.variant, setColor]);
+        if (!product) return;
 
-    // set Sizes
-    useEffect(() => {
-        if (product?.sizes) {
-            setSizes(product?.sizes[0]); // ✅ first one selected
+        // Only update if values have changed
+        if (product.variant?.[0] && product.variant[0] !== color) {
+            setColor(product.variant[0]);
         }
-    }, [product?.sizes, setSizes]);
-
-
-    // set new quantity 1 on different page_____________________________________________________________
-    useEffect(() => {
-        if (product) {
-            setQuantity(1); // ✅ first one selected
+        if (product.sizes?.[0] && product.sizes[0] !== sizes) {
+            setSizes(product.sizes[0]);
         }
-    }, [product, setQuantity]);
+        // Reset quantity to 1 when product changes
+        setQuantity(1);
+    }, [product?._id]); // Only depend on product ID change, not the setters
 
 
     // related product datas
     const { data: relatedProducts = [], isLoading: isLoadingRelatedProducts } = useQuery({
         queryKey: ["related_products", id, product?.category],
         queryFn: async () => {
-            const { data } = await axiosCommon.get(`/related_products/${id}?category=${product?.category}`);
-            return data;
+            const response = await fetch(`${API_URL}/related_products/${id}?category=${product?.category}`, {
+                next: { revalidate: 120 } // Cache for 2 minutes
+            });
+            if (!response.ok) throw new Error('Failed to fetch related products');
+            return response.json();
         },
+        enabled: !!product?.category // Only fetch when category is available
     });
 
     // fetch all reviews
     const { data: reviewsData = [], refetch: reviewsRefetch } = useQuery({
         queryKey: ['reviewsData', id],
         queryFn: async () => {
-            const { data } = await axiosCommon.get(`/reviews_data/${id}`);
-            return data;
+            const response = await fetch(`${API_URL}/reviews_data/${id}`, {
+                next: { revalidate: 30 } // Cache for 30 seconds
+            });
+            if (!response.ok) throw new Error('Failed to fetch reviews');
+            return response.json();
         }
     });
 
@@ -117,16 +117,27 @@ const ProductDetails = () => {
     const { data: reviewStats = {} } = useQuery({
         queryKey: ['reviewStats', id],
         queryFn: async () => {
-            const { data } = await axiosCommon.get(`/review_rating/${id}`);
-            return data;
+            const response = await fetch(`${API_URL}/review_rating/${id}`, {
+                next: { revalidate: 60 } // Cache for 60 seconds
+            });
+            if (!response.ok) throw new Error('Failed to fetch review stats');
+            return response.json();
         }
     });
 
     // add to cart 
     const { mutateAsync: addToCart } = useMutation({
         mutationFn: async (cartItem) => {
-            const { data } = await axiosSecure.post("/cart", cartItem);
-            return data;
+            const response = await fetch(`${API_URL}/cart`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(cartItem),
+                cache: 'no-store'
+            });
+            if (!response.ok) throw new Error('Failed to add to cart');
+            return response.json();
         },
         onSuccess: () => {
             toast.success("Product added to cart");
@@ -139,16 +150,28 @@ const ProductDetails = () => {
     const { data: purchaseData = [], purchaseLoading } = useQuery({
         queryKey: ['purchased_check', user?.email, id],
         queryFn: async () => {
-            const { data } = await axiosSecure.get(`/purchased_info/${user?.email}?product_id=${id}`);
-            return data;
-        }
+            const response = await fetch(`${API_URL}/purchased_info/${user?.email}?product_id=${id}`, {
+                cache: 'no-store' // Always fresh for purchase check
+            });
+            if (!response.ok) throw new Error('Failed to check purchase');
+            return response.json();
+        },
+        enabled: !!user?.email // Only fetch when user is logged in
     });
 
     // add reviews
     const { mutateAsync: addReviews, isPending: reviewPending } = useMutation({
         mutationFn: async (reviewData) => {
-            const { data } = await axiosCommon.post('/add_review', reviewData);
-            return data;
+            const response = await fetch(`${API_URL}/add_review`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(reviewData),
+                cache: 'no-store'
+            });
+            if (!response.ok) throw new Error('Failed to add review');
+            return response.json();
         },
         onSuccess: () => {
             setImages([]);
@@ -198,15 +221,19 @@ const ProductDetails = () => {
         await addToCart(cartItem);
     };
 
-    const handleBuyNowNavigate = (id) => {
+    const handleBuyNowNavigate = useCallback((id) => {
         setCartOpen(false);
         router.push(`/checkout/${id}`);
-    };
+    }, [setCartOpen, router]);
 
-    const specificationsPoints = product.specification?.split(",,") || [];
+    // Memoize expensive string split operation
+    const specificationsPoints = useMemo(
+        () => product.specification?.split(",") || [],
+        [product.specification]
+    );
 
 
-    const handleImageChange = (e) => {
+    const handleImageChange = useCallback((e) => {
         const files = Array.from(e.target.files);
         const previews = [];
 
@@ -220,9 +247,9 @@ const ProductDetails = () => {
             };
             reader.readAsDataURL(file);
         });
-    };
+    }, []);
 
-    const handleReview = async () => {
+    const handleReview = useCallback(async () => {
         if (!user) return toast.error('Please Login To Submit A Review !');
         if (!rating) return toast.error('Please Rate This Product !');
         if (!purchaseData.purchased) return toast.error('You need to purchase this product to submit a review !');
@@ -245,7 +272,7 @@ const ProductDetails = () => {
         } finally {
             setLaoding(false);
         }
-    };
+    }, [user, rating, purchaseData.purchased, reviewText, images, id, name, addReviews]);
 
     // react head
     useHead({
@@ -336,7 +363,7 @@ const ProductDetails = () => {
 
                     {/* variant */}
                     <div>
-                        {product?.variant.length !== 0 && <p className="block mb-1 capitalize font-medium">Color :<span className="font-normal"> {color}</span></p>}
+                        {product?.variant?.length !== 0 && <p className="block mb-1 capitalize font-medium">Color :<span className="font-normal"> {color}</span></p>}
                         <div className="flex flex-wrap gap-4">
                             {product?.variant?.map((v, idx) => (
                                 <button

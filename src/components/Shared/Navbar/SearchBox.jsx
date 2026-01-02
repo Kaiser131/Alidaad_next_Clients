@@ -4,10 +4,8 @@ import { ArrowRight, Search, } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { RxCross1, RxCrossCircled } from "react-icons/rx";
 import { motion } from "framer-motion";
-import useAxiosCommon from '../../../Hooks/Axios/useAxiosCommon';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import queryString from 'query-string';
 
 const SearchBox = ({ searchbarOpen, setSearchbarOpen }) => {
@@ -52,14 +50,19 @@ const SearchBox = ({ searchbarOpen, setSearchbarOpen }) => {
 
 
 
-    // get the search results
-    const axiosCommon = useAxiosCommon();
+    // get the search results using Next.js fetch
     const { data: searchData = [] } = useQuery({
         queryKey: ['search', debouncedQuery],
         queryFn: async () => {
-            const { data } = await axiosCommon.get(`/search?search=${debouncedQuery}`);
-            return data;
-        }
+            const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000'}/search?search=${debouncedQuery}`, {
+                cache: 'no-store' // Real-time search, no caching
+            });
+            if (!response.ok) {
+                throw new Error('Search failed');
+            }
+            return response.json();
+        },
+        enabled: debouncedQuery.length > 0 // Only fetch when there's a query
     });
 
     // navigate to product details

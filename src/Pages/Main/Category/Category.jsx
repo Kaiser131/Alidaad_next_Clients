@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import useAxiosCommon from '../../../Hooks/Axios/useAxiosSecure';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, Settings2 } from 'lucide-react';
 import useAuth from '../../../Hooks/Auth/useAuth';
@@ -43,7 +42,7 @@ const Category = () => {
     const [itemsPerPage] = useState(12);
     const totalPages = Math.ceil(count / itemsPerPage);
 
-    // Update URL when state changes
+    // Update URL when state changes - optimized
     useEffect(() => {
         if (isInitialMount.current) {
             isInitialMount.current = false;
@@ -58,11 +57,12 @@ const Category = () => {
         if (priceRange[0] !== 0) params.set('minPrice', priceRange[0].toString());
         if (priceRange[1] !== 1000000) params.set('maxPrice', priceRange[1].toString());
 
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    }, [currentPage, filter, sort, priceRange, category, pathname, router]);
+        const newUrl = `${pathname}?${params.toString()}`;
+        router.replace(newUrl, { scroll: false });
+    }, [currentPage, filter, sort, priceRange[0], priceRange[1], category, pathname, router]);
 
-    // Generate page numbers with ellipsis - shows current page with 2 before and 2 after
-    const getPageNumbers = () => {
+    // Memoize page numbers calculation to prevent recalculation on every render
+    const pageNumbers = useMemo(() => {
         const pages = [];
         const delta = 2; // Show 2 pages before and after current page
 
@@ -111,23 +111,25 @@ const Category = () => {
         }
 
         return pages;
-    };
+    }, [totalPages, currentPage]);
 
-    const pageNumbers = getPageNumbers();
-
-    const handleNavigate = (id) => {
+    const handleNavigate = useCallback((id) => {
         setSearchbarOpen(false);
         setCartOpen(false);
         router.push(`/product_details/${id}`);
-    };
+    }, [router, setSearchbarOpen, setCartOpen]);
 
-    const queryParams = new URLSearchParams();
-    if (filter) queryParams.append('filter', filter);
-    if (sort) queryParams.append('sort', sort);
-    if (priceRange[0] !== 0) queryParams.append('minPrice', priceRange[0]);
-    if (priceRange[1] !== 1000000) queryParams.append('maxPrice', priceRange[1]);
-    if (currentPage) queryParams.append('currentPage', currentPage);
-    if (itemsPerPage) queryParams.append('itemsPerPage', itemsPerPage);
+    // Memoize query params construction
+    const queryParamsString = useMemo(() => {
+        const params = new URLSearchParams();
+        if (filter) params.append('filter', filter);
+        if (sort) params.append('sort', sort);
+        if (priceRange[0] !== 0) params.append('minPrice', priceRange[0]);
+        if (priceRange[1] !== 1000000) params.append('maxPrice', priceRange[1]);
+        if (currentPage) params.append('currentPage', currentPage);
+        if (itemsPerPage) params.append('itemsPerPage', itemsPerPage);
+        return params.toString();
+    }, [filter, sort, priceRange, currentPage, itemsPerPage]);
 
     // prevent layout shaky shifting on search box open________________________________________________________________________________________________
     useEffect(() => {
@@ -143,31 +145,55 @@ const Category = () => {
         }
     }, [isOpen]);
 
+    // API URL configuration
+    const API_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000';
 
-    const axiosCommon = useAxiosCommon();
+    // Fetch category products with Next.js fetch API
     const { data: categoryData = [], isLoading: isLoadingCategoryData } = useQuery({
-        queryKey: ['category', category, queryParams.toString(), currentPage],
+        queryKey: ['category', category, queryParamsString, currentPage],
         queryFn: async () => {
-            const result = await axiosCommon.get(`/all_products/${category}?${queryParams.toString()}`);
-            return result.data;
-        }
+            const response = await fetch(`${API_URL}/all_products/${category}?${queryParamsString}`, {
+                next: { revalidate: 60 }, // Cache for 60 seconds
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch category data');
+            return response.json();
+        },
+        enabled: !!category
     });
 
-    // Fetch max price from category products
+    // Fetch max price from category products with Next.js fetch API
     const { data: maxPriceData } = useQuery({
         queryKey: ['maxPrice', category],
         queryFn: async () => {
-            const { data } = await axiosCommon.get(`/products_max_price/${category}`);
-            return data;
-        }
+            const response = await fetch(`${API_URL}/products_max_price/${category}`, {
+                next: { revalidate: 300 }, // Cache for 5 minutes
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch max price');
+            return response.json();
+        },
+        enabled: !!category
     });
 
     const maxPrice = maxPriceData?.maxPrice || 1000000;
 
+    // Fetch category count with Next.js fetch API
     const { isLoading: isLoadingCategoryDataCount } = useQuery({
-        queryKey: ['cateGoryDataCount', currentPage, queryParams.toString(), category],
+        queryKey: ['categoryDataCount', currentPage, queryParamsString, category],
         queryFn: async () => {
-            const { data } = await axiosCommon.get(`/category_data_count?category=${category}&currentPage=${currentPage}`);
+            const response = await fetch(`${API_URL}/category_data_count?category=${category}&currentPage=${currentPage}`, {
+                cache: 'no-store', // Always get fresh count
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch category count');
+            const data = await response.json();
             setCount(data?.count);
             return data;
         },

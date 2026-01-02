@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Trash2, Wallet } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useRouter, useParams } from 'next/navigation';
-import useAxiosSecure from "../../../Hooks/Axios/useAxiosSecure";
 import useAuth from "../../../Hooks/Auth/useAuth";
 import Swal from "sweetalert2";
 import Loading from "../../../components/Shared/Loading/Loading";
@@ -24,37 +23,58 @@ export default function Checkout() {
     const [name, setName] = useState('');
     const [mobile, setMobile] = useState('');
     const [address, setAddress] = useState('');
-    const axiosSecure = useAxiosSecure();
     const router = useRouter();
     const { id } = useParams();
 
+    // API URL configuration
+    const API_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000';
+
     // console.log(id);
 
-    // single buy data Product_________________________________________________________________________________________________________
+    // single buy data Product - using Next.js fetch API
     const { data: product = {}, isLoading: isLoadingProduct } = useQuery({
         queryKey: ["product", id],
         queryFn: async () => {
-            const result = await axiosSecure.get(`/product_details/${id}`);
-            return result.data;
+            const response = await fetch(`${API_URL}/product_details/${id}`, {
+                next: { revalidate: 60 }, // Cache for 60 seconds
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch product');
+            return response.json();
         },
         enabled: !!id // only run the query if id exists
     });
 
 
-    // get all cart data_________________________________________________________________________________________________________________
+    // get all cart data - using Next.js fetch API
     const { data: cartProducts = [], refetch, isLoading: isLoadingCartProducts } = useQuery({
         queryKey: ['cartProducts', cartToken],
         queryFn: async () => {
-            const { data } = await axiosSecure(`/cart/${cartToken}`);
-            return data;
-        }
+            const response = await fetch(`${API_URL}/cart/${cartToken}`, {
+                cache: 'no-store', // Always get fresh cart data
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch cart');
+            return response.json();
+        },
+        enabled: !!cartToken
     });
 
-    // delete cart item_______________________________________________________________________________________________________
+    // delete cart item - using Next.js fetch API
     const { mutateAsync: clearCart } = useMutation({
         mutationFn: async (id) => {
-            const { data } = await axiosSecure.delete(`/cart/delete/${id}`);
-            return data;
+            const response = await fetch(`${API_URL}/cart/delete/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            if (!response.ok) throw new Error('Failed to clear cart');
+            return response.json();
         },
         onSuccess: () => {
             queryClient.invalidateQueries(["cartProducts", cartToken]);
@@ -69,19 +89,34 @@ export default function Checkout() {
 
 
 
-    // total price calculation_______________________________________________________________________________________________
-    const cartTotal = cartProducts.reduce((sum, item) => sum + item.total_price, 0);
-    let deliveryCharge = 0;
-    if (pathaoDeliveryInfo) {
-        deliveryCharge = pathaoDeliveryInfo.price;
-    }
-    const total = cartTotal + deliveryCharge;
-    const singleTotal = product?.discountedPrice * quantity + deliveryCharge;
+    // Memoize expensive calculations to prevent recalculation on every render
+    const cartTotal = useMemo(
+        () => cartProducts.reduce((sum, item) => sum + item.total_price, 0),
+        [cartProducts]
+    );
 
-    // Calculate total item weight for Pathao
-    const totalItemWeight = id
-        ? (quantity * 0.5)
-        : (cartProducts.reduce((sum, item) => sum + item.quantity, 0) * 0.5);
+    const deliveryCharge = useMemo(
+        () => pathaoDeliveryInfo ? pathaoDeliveryInfo.price : 0,
+        [pathaoDeliveryInfo]
+    );
+
+    const total = useMemo(
+        () => cartTotal + deliveryCharge,
+        [cartTotal, deliveryCharge]
+    );
+
+    const singleTotal = useMemo(
+        () => (product?.discountedPrice || 0) * quantity + deliveryCharge,
+        [product?.discountedPrice, quantity, deliveryCharge]
+    );
+
+    // Calculate total item weight for Pathao - memoized
+    const totalItemWeight = useMemo(
+        () => id
+            ? (quantity * 0.5)
+            : (cartProducts.reduce((sum, item) => sum + item.quantity, 0) * 0.5),
+        [id, quantity, cartProducts]
+    );
 
     // Handle Pathao price calculation callback
     const handlePathaoPrice = useCallback((priceInfo) => {
@@ -89,11 +124,19 @@ export default function Checkout() {
     }, []);
 
 
-    // add user cart data to the server_____________________________________________________________________________________
+    // add user cart data to the server - using Next.js fetch API
     const { mutateAsync: placedOrder } = useMutation({
         mutationFn: async (placedOrderInfo) => {
-            const { data } = await axiosSecure.post(`/orders`, placedOrderInfo);
-            return data;
+            const response = await fetch(`${API_URL}/orders`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(placedOrderInfo),
+                cache: 'no-store'
+            });
+            if (!response.ok) throw new Error('Failed to place order');
+            return response.json();
         },
         onSuccess: async () => {
             toast.success('Order placed successfully');
@@ -107,8 +150,8 @@ export default function Checkout() {
 
 
 
-    // add user details to the server_________________________________________________________________________________________
-    const handlePlaceOrder = async () => {
+    // add user details to the server - memoized callback
+    const handlePlaceOrder = useCallback(async () => {
         // Check required fields first
         if (!name || !mobile || !address) {
             toast.error('Please fill all the fields');
@@ -123,8 +166,8 @@ export default function Checkout() {
 
         // Check Bangladeshi mobile number prefix
         const sliceMobile = mobile.slice(0, 3);
-        if (sliceMobile !== '017' && sliceMobile !== '018' && sliceMobile !== '019' && 
-            sliceMobile !== '016' && sliceMobile !== '015' && sliceMobile !== '013' && 
+        if (sliceMobile !== '017' && sliceMobile !== '018' && sliceMobile !== '019' &&
+            sliceMobile !== '016' && sliceMobile !== '015' && sliceMobile !== '013' &&
             sliceMobile !== '014') {
             toast.error('Please enter a valid Bangladeshi mobile number');
             return;
@@ -200,28 +243,36 @@ export default function Checkout() {
             console.log(error);
         }
 
-    };
+    }, [name, mobile, address, deliveryCharge, pathaoDeliveryInfo, id, singleTotal, total,
+        product, quantity, color, sizes, cartToken, user?.email, special_instruction,
+        paymentMethod, filteredArray, placedOrder]);
 
 
 
 
-    // delete cart item_______________________________________________________________________________________________________
+    // delete cart item - using Next.js fetch API
     const { mutateAsync: deleteCartItem } = useMutation({
         mutationFn: async (id) => {
-            const { data } = await axiosSecure.delete(`/cart/${id}`);
-            return data;
+            const response = await fetch(`${API_URL}/cart/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            if (!response.ok) throw new Error('Failed to delete item');
+            return response.json();
         },
         onSuccess: () => {
-            toast.success('Item deleted'),
-                refetch();
+            toast.success('Item deleted');
+            refetch();
         }
     });
 
 
     // console.log(product);
-    const handleDelete = async (id) => {
+    const handleDelete = useCallback(async (id) => {
         await deleteCartItem(id);
-    };
+    }, [deleteCartItem]);
 
 
     useHead({

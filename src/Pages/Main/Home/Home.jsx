@@ -1,3 +1,5 @@
+'use client';
+
 import React, { Suspense, lazy } from 'react';
 import Banner from '../../../components/Main/Home/Banner/Banner';
 import Loading from '../../../components/Shared/Loading/Loading';
