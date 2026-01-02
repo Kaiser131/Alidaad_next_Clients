@@ -1,14 +1,29 @@
-import React from 'react';
+import BannerEditor from './BannerEditor';
 
-const ImagesEditPage = () => {
-    return (
-        <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4">Image Editor</h1>
-            <div className="bg-white rounded-lg shadow p-6">
-                <p>Image editing functionality will be implemented here.</p>
-            </div>
-        </div>
-    );
-};
+// Server Component - Fetch data using Next.js built-in fetch
+async function getBanners() {
+    try {
+        const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000';
+        const res = await fetch(`${serverUrl}/banners`, {
+            cache: 'no-store', // Always get fresh data
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
 
-export default ImagesEditPage;
+        if (!res.ok) {
+            throw new Error('Failed to fetch banners');
+        }
+
+        return res.json();
+    } catch (error) {
+        console.error('Error fetching banners:', error);
+        return [];
+    }
+}
+
+export default async function ImagesEditPage() {
+    const initialBanners = await getBanners();
+
+    return <BannerEditor initialBanners={initialBanners} />;
+}
