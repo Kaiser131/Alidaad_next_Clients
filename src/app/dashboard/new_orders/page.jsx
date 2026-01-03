@@ -1,4 +1,4 @@
-import NewOrders from '@/Pages/Dashboard/Orders/NewOrders';
+import NewOrders from '@/page-components/Dashboard/Orders/NewOrders';
 
 export default function NewOrdersPage() {
   return <NewOrders />;

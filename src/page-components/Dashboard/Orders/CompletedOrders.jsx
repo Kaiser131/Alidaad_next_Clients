@@ -3,12 +3,12 @@
 import React, { useState } from 'react';
 import Breadcrumbs from '../../../components/Shared/Breadcrumbs/Breadcrumbs';
 import useAxiosSecure from '../../../Hooks/Axios/useAxiosSecure';
-import { useMutation, useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import Swal from 'sweetalert2';
 import Loading from '../../../components/Shared/Loading/Loading';
 import { DataTable } from '../../../components/ui/data-table';
-import { createCancelledColumns } from './cancelledColumns';
+import { createColumns } from '@/lib/columns/columns';
 import {
     Select,
     SelectContent,
@@ -17,41 +17,44 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
-const CancelledOrders = () => {
+const CompletedOrders = () => {
     const axiosSecure = useAxiosSecure();
 
-    // states
+    // states________________________________________________________________________________________________________________
     const [search, setSearch] = useState('');
     const [month, setMonth] = useState(new Date().toLocaleString('en-US', { month: 'long' }));
 
 
-    // request and responses__________________________________________________________________________________________________
-    const { data: cancelled_orders = [], refetch, isLoading: cancelledOrdersIsLoading } = useQuery({
-        queryKey: ['cancelled_orders', search, month],
+    // requests and responses________________________________________________________________________________________________
+
+    // Completed orders table data____________________________________________________
+    const { data: completed_orders = [], refetch, isLoading: completedOrdersIsLoading } = useQuery({
+        queryKey: ['completed_orders', search, month],
         queryFn: async () => {
-            const { data } = await axiosSecure.get(`/order_lists/${'cancelled'}?search=${search}&month=${month}`);
+            const { data } = await axiosSecure.get(`/order_lists/${'completed'}?search=${search}&month=${month}`);
             return data;
         }
     });
 
-    // proceed order___________________________________________________________________
-    const { mutateAsync: proceedOrder } = useMutation({
+    // cancel order_____________________________________________________________________
+    const { mutateAsync: cancelOrder } = useMutation({
         mutationFn: async (id) => {
-            const { data } = await axiosSecure.patch(`/proceed_order/${id}`);
+            const { data } = await axiosSecure.patch(`/cancel_order/${id}`);
             return data;
         },
         onSuccess: () => {
             refetch();
             Swal.fire({
                 title: "Congratulations!",
-                text: "Your order has been proceed.",
-                icon: "success"
+                text: "Your order has been cancelled.",
+                icon: "error"
             });
         }
     });
 
 
-    // functions_______________________________________________________________________________________________________________
+
+    // functions_____________________________________________________________________________________________________________
     const handleSearch = (e) => {
         e.preventDefault();
         const form = e.target;
@@ -60,37 +63,39 @@ const CancelledOrders = () => {
         // form.reset();
     };
 
-    const handleProceedOrder = async (id) => {
+    const handleCancelOrder = async (id) => {
         // console.log(id);
         Swal.fire({
-            title: "Are you sure to proceed this order?",
-            icon: "info",
+            title: "Are you sure to cancel this order?",
+            icon: "warning",
             showCancelButton: true,
             confirmButtonColor: "#3085d6",
             cancelButtonColor: "#d33",
             confirmButtonText: "Yes, Proceed"
         }).then((result) => {
             if (result.isConfirmed) {
-                proceedOrder(id);
+                cancelOrder(id);
             }
         });
     };
 
 
-    // consoles_______________________________________________________________________________________________________________
-    // console.log(cancelled_orders);
+    // consoles______________________________________________________________________________________________________________
+    // console.log(completed_orders);
 
-    // Create columns with handler function
-    const columns = createCancelledColumns(handleProceedOrder);
+    // Create columns with handleCancelOrder function
+    const columns = createColumns(handleCancelOrder);
 
-    if (cancelledOrdersIsLoading) return <Loading />;
+
+    if (completedOrdersIsLoading) return <Loading />;
+
 
 
     return (
         <div className='min-h-[100dvh] bg-[#F4F8FB] p-4 sm:p-6 md:p-10 relative'>
             <div className="space-y-4">
 
-                <p className='text-xl sm:text-2xl font-bold'>Cancelled Orders</p>
+                <p className='text-xl sm:text-2xl font-bold'>Completed Orders</p>
                 {/* breadcrumbs */}
                 <Breadcrumbs />
 
@@ -129,8 +134,9 @@ const CancelledOrders = () => {
 
                 {/* Data Table */}
                 <div className="pb-12">
-                    <DataTable columns={columns} data={cancelled_orders} />
+                    <DataTable columns={columns} data={completed_orders} />
                 </div>
+
 
 
             </div>
@@ -138,4 +144,4 @@ const CancelledOrders = () => {
     );
 };
 
-export default CancelledOrders;
+export default CompletedOrders;

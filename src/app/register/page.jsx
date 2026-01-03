@@ -1,4 +1,4 @@
-import Register from '@/Pages/Authenticate/Register';
+import Register from '@/page-components/Authenticate/Register';
 
 export const metadata = {
   title: 'Register - Alidaad',

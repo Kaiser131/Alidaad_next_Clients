@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import toast from 'react-hot-toast';
 import Loading from '../../../components/Shared/Loading/Loading';
 import { DataTable } from '../../../components/ui/data-table';
-import { createPendingColumns } from './pendingColumns';
+import { createPendingColumns } from '@/lib/columns/pendingColumns';
 import {
     Select,
     SelectContent,

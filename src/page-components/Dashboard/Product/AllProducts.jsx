@@ -7,7 +7,7 @@ import useAxiosSecure from '../../../Hooks/Axios/useAxiosSecure';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Swal from 'sweetalert2';
 import { DataTable } from '../../../components/ui/data-table';
-import { createProductColumns } from './productColumns';
+import { createProductColumns } from '@/lib/columns/productColumns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {

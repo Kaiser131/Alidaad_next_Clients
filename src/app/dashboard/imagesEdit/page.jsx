@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import BannerEditor from './BannerEditor';
 import OfferEditor from './OfferEditor';
 import FaqEditor from './FaqEditor';

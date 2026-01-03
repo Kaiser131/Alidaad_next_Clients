@@ -19,7 +19,9 @@ export default function AdminChatWindow({ session, onBack, showBackButton }) {
 
     // Update current session ref
     useEffect(() => {
+        if (!email) return;
         currentSessionRef.current = { email, cartToken };
+
     }, [email, cartToken]);
 
     // Auto scroll to bottom when messages change

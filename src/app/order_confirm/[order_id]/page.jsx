@@ -1,4 +1,4 @@
-import OrderConfirm from '@/Pages/Main/OrderConfirm/OrderConfirm';
+import OrderConfirm from '@/page-components/Main/OrderConfirm/OrderConfirm';
 
 export const metadata = {
   title: 'Order Confirmation - Alidaad',

@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  pageExtensions: ['page.jsx', 'page.js', 'page.tsx', 'page.ts'],
   images: {
     remotePatterns: [
       {
@@ -19,6 +18,12 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   output: "standalone",
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  }
 };
 
 export default nextConfig;

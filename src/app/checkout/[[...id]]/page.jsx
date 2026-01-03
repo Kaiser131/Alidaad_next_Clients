@@ -1,4 +1,4 @@
-import Checkout from '@/Pages/Main/Checkout/Checkout';
+import Checkout from '@/page-components/Main/Checkout/Checkout';
 
 export const metadata = {
   title: 'Checkout - Alidaad',

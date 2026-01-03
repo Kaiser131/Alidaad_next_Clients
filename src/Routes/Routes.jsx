@@ -27,7 +27,7 @@ import AdminChatList from "../Pages/Dashboard/Chat/AdminChatList";
 import Users from "../Pages/Dashboard/Users/Users";
 import PrivateRoute from "./PrivateRoute";
 import AdminRoute from "./AdminRoute";
-import ImagesEdit from "@/Pages/Dashboard/Edit/ImagesEdit";
+import ImagesEdit from "@/page-components/Dashboard/Edit/ImagesEdit";
 
 
 const router = createBrowserRouter([

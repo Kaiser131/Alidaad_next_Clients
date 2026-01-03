@@ -1,4 +1,4 @@
-import AllProducts from '@/Pages/Dashboard/Product/AllProducts';
+import AllProducts from '@/page-components/Dashboard/Product/AllProducts';
 
 export default function AllProductsPage() {
   return <AllProducts />;

@@ -7,7 +7,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import Swal from "sweetalert2";
 import Loading from "../../../components/Shared/Loading/Loading";
 import { DataTable } from "../../../components/ui/data-table";
-import { createColumns } from "./columns";
+import { createColumns } from "@/lib/columns/columns";
 import {
     Select,
     SelectContent,

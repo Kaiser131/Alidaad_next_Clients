@@ -7,8 +7,8 @@ import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/Shared/Breadcrumbs/Breadcrumbs';
 import Loading from '../../../components/Shared/Loading/Loading';
 import { UsersDataTable } from '../../../components/ui/users-data-table';
-import { createUserColumns } from './userColumns';
-import { UserSpendingsModal } from './UserSpendingsModal';
+import { createUserColumns } from '@/lib/columns/userColumns';
+import { UserSpendingsModal } from '@/lib/modals/UserSpendingsModal';
 import Swal from 'sweetalert2';
 
 const Users = () => {

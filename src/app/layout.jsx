@@ -31,9 +31,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body suppressHydrationWarning={true}>
-        <AuthProvider>
-          <UnheadProvider head={head}>
-            <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <UnheadProvider head={head}>
               <NotificationProvider user={null}>
                 <Toaster position="top-right" toastOptions={{
                   duration: 3000,
@@ -46,9 +46,9 @@ export default function RootLayout({ children }) {
                   {children}
                 </MainLayoutWrapper>
               </NotificationProvider>
-            </QueryClientProvider>
-          </UnheadProvider>
-        </AuthProvider>
+            </UnheadProvider>
+          </AuthProvider>
+        </QueryClientProvider>
       </body>
     </html>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import Account from '@/Pages/Main/Account/Account';
+import Account from '@/page-components/Main/Account/Account';
 import PrivateRoute from '@/Routes/PrivateRoute';
 
 export default function AccountPage() {
