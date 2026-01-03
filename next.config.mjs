@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  pageExtensions: ['page.jsx', 'page.js', 'page.tsx', 'page.ts'],
   images: {
     remotePatterns: [
       {

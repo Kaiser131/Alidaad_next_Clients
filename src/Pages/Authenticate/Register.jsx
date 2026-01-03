@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import useAuth from '../../Hooks/Auth/useAuth';
 import Link from 'next/link';
