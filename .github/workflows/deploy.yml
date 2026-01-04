@@ -1,14 +1,28 @@
-name: Auto Deploy on Push
+name: Trigger Easypanel Deployment
 
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
-  trigger-deployment:
+  deploy:
+    name: Trigger Easypanel Deploy
     runs-on: ubuntu-latest
 
     steps:
-      - name: Call Deployment Webhook
-        run: curl http://72.60.222.185:3000/api/deploy/a13257989f7ea08308e6b883022934673a07c03ec476b42b
+      - name: 🧪 Print Deployment Info
+        run: |
+          echo "🔁 Deploying to Easypanel..."
+          echo "📂 Repository: ${{ github.repository }}"
+          echo "🌿 Branch: ${{ github.ref_name }}"
+          echo "🔢 Commit: ${{ github.sha }}"
+          echo "👤 Triggered by: ${{ github.actor }}"
+
+      - name: 🚀 Trigger Easypanel Deploy Hook
+        env:
+          DEPLOY_HOOK_URL: http://72.60.222.185:3000/api/deploy/a13257989f7ea08308e6b883022934673a07c03ec476b42b
+        run: |
+          echo "Calling Easypanel Deploy Hook..."
+          curl -X POST "$DEPLOY_HOOK_URL"
+          echo "✅ Deploy hook triggered successfully"
