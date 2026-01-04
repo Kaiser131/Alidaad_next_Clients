@@ -3,7 +3,7 @@ name: Build Next.js Project
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   build:
