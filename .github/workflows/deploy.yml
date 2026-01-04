@@ -3,7 +3,7 @@ name: Auto Deploy on Push
 on:
   push:
     branches:
-      - main # Change to 'master' or your branch name if different
+      - main
 
 jobs:
   trigger-deployment:
@@ -11,10 +11,4 @@ jobs:
 
     steps:
       - name: Call Deployment Webhook
-        run: |
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            http://72.60.222.185:3000/api/deploy/a13257989f7ea08308e6b883022934673a07c03ec476b42b
-
-      - name: Show deployment triggered
-        run: echo "Deployment webhook called successfully"
+        run: curl http://72.60.222.185:3000/api/deploy/a13257989f7ea08308e6b883022934673a07c03ec476b42b
