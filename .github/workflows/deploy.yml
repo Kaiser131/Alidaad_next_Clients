@@ -1,4 +1,4 @@
-name: Trigger Easypanel Deployment
+name: Build Next.js Project
 
 on:
   push:
@@ -6,23 +6,30 @@ on:
       - master
 
 jobs:
-  deploy:
-    name: Trigger Easypanel Deploy
+  build:
+    name: Build Next.js Application
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🧪 Print Deployment Info
-        run: |
-          echo "🔁 Deploying to Easypanel..."
-          echo "📂 Repository: ${{ github.repository }}"
-          echo "🌿 Branch: ${{ github.ref_name }}"
-          echo "🔢 Commit: ${{ github.sha }}"
-          echo "👤 Triggered by: ${{ github.actor }}"
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
 
-      - name: 🚀 Trigger Easypanel Deploy Hook
-        env:
-          DEPLOY_HOOK_URL: http://72.60.222.185:3000/api/deploy/a13257989f7ea08308e6b883022934673a07c03ec476b42b
-        run: |
-          echo "Calling Easypanel Deploy Hook..."
-          curl -X POST "$DEPLOY_HOOK_URL"
-          echo "✅ Deploy hook triggered successfully"
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: 📦 Install Dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: 🔨 Build Next.js Project
+        run: npm run build
+
+      - name: ✅ Build Completed
+        if: success()
+        run: echo "✅ Build completed successfully!"
+
+      - name: ❌ Build Failed
+        if: failure()
+        run: echo "❌ Build failed! Check the logs above for errors."
