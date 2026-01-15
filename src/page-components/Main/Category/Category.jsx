@@ -158,7 +158,8 @@ const Category = () => {
 
         // Fix hasOffer calculation
         hasOffer: findTheProduct?.discountedPrice
-          ? findTheProduct.discountedPrice !== parseFloat(findTheProduct.price)
+          ? findTheProduct?.discountedPrice !==
+            parseFloat(findTheProduct?.price)
           : false,
 
         sku: findTheProduct?.SKU || "N/A",
