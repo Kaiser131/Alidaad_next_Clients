@@ -21,11 +21,11 @@ const Categories = () => {
   const categories = [
     {
       name: "Men",
-      image: "/images/attar.jpeg",
+      image: "/images/MEN.jpeg",
     },
     {
       name: "Luxury",
-      image: "/images/MEN.jpeg",
+      image: "/images/attar.jpeg",
     },
   ];
 
